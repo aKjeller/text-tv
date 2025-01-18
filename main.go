@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
+	"github.com/aKjeller/text-tv/internal/display"
 	"github.com/aKjeller/text-tv/pkg/svttext"
 )
 
@@ -22,9 +22,8 @@ func main() {
 		log.Fatalf("failed to get page", err)
 	}
 
-	text := page.Text
-	text = strings.TrimPrefix(text, "\n")
-	text = strings.TrimSuffix(text, "\n\n\n")
-
-	fmt.Println(text)
+	err = display.RenderPage(page)
+	if err != nil {
+		log.Fatalf("failed to render page", err)
+	}
 }
