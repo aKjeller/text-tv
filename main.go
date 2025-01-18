@@ -17,13 +17,15 @@ func main() {
 
 	pageId := os.Args[1]
 
-	page, err := svttext.GetPage(pageId)
+	pages, err := svttext.GetPages(pageId)
 	if err != nil {
 		log.Fatalf("failed to get page", err)
 	}
 
-	err = display.RenderPage(page)
-	if err != nil {
-		log.Fatalf("failed to render page", err)
+	for _, page := range pages {
+		err = display.RenderPage(page)
+		if err != nil {
+			log.Fatalf("failed to render page", err)
+		}
 	}
 }

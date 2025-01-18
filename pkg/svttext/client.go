@@ -14,26 +14,31 @@ type Page struct {
 	Image string
 }
 
-func GetPage(id string) (Page, error) {
-	url := fmt.Sprintf(URL_FMT, id)
+func GetPages(id string) ([]Page, error) {
+	var pages []Page
 
+	url := fmt.Sprintf(URL_FMT, id)
 	resp, err := http.Get(url)
 	if err != nil {
-		return Page{}, fmt.Errorf("error during GET request to %s: %w", url, err)
+		return pages, fmt.Errorf("error during GET request to %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Page{}, fmt.Errorf("error reading response body: %w", err)
+		return pages, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	var response response
 	if err := json.Unmarshal(body, &response); err != nil {
-		return Page{}, fmt.Errorf("error parsing JSON response: %w", err)
+		return pages, fmt.Errorf("error parsing JSON response: %w", err)
 	}
 
-	return Page{Text: response.Data.SubPages[0].AltText, Image: response.Data.SubPages[0].GifAsBase64}, nil
+	for _, page := range response.Data.SubPages {
+		pages = append(pages, Page{Text: page.AltText, Image: page.GifAsBase64})
+	}
+
+	return pages, nil
 }
 
 type response struct {
