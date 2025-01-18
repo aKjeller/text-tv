@@ -1,0 +1,14 @@
+# Ignore everything
+*
+
+# But not these files...
+!/.gitignore
+
+!/.README.md
+
+!*.go
+!go.sum
+!go.mod
+
+# ...even if they are in subdirectories
+!*/
