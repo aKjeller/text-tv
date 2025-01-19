@@ -35,8 +35,9 @@ func (g grid) render(colors *colorMap) {
 	for i, row := range g {
 		r := ""
 		for j, c := range row {
-			r += toColorString(c, colors.getColor(j, i))
+			r += colors.getColor(j, i).colorRune(c)
 		}
+		r += colors.getColor(i, len(row)-1).colorRune(' ')
 		fmt.Println(r)
 	}
 }
@@ -51,9 +52,14 @@ func createGrid(text string) grid {
 		}
 		grid = append(grid, cols)
 	}
-	return grid
-}
 
-func toColorString(r rune, color int) string {
-	return fmt.Sprintf("\u001b[%dm%s\u001b[0m", color, string(r))
+	width := grid.getWidth()
+
+	for i := range grid {
+		for j := len(grid[i]); j < width; j++ {
+			grid[i] = append(grid[i], ' ')
+		}
+	}
+
+	return grid
 }

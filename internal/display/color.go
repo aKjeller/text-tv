@@ -9,13 +9,30 @@ import (
 	"strings"
 )
 
+type cell struct {
+	bg color.Color
+	fg color.Color
+}
+
+func (c cell) colorRune(r rune) string {
+	bg, fg := "", ""
+	if c.bg != nil {
+		bgR, bgG, bgB, _ := c.bg.RGBA()
+		bg = fmt.Sprintf("\u001b[48;2;%d;%d;%dm", bgR>>8, bgG>>8, bgB>>8)
+	}
+	if c.fg != nil {
+		fgR, fgG, fgB, _ := c.fg.RGBA()
+		fg = fmt.Sprintf("\u001b[38;2;%d;%d;%dm", fgR>>8, fgG>>8, fgB>>8)
+	}
+
+	return bg + fg + string(r) + "\u001b[0m"
+}
+
 type colorMap struct {
 	image image.Image
 	dx    int
 	dy    int
 }
-
-var background = color.RGBA{0, 0, 0, 255}
 
 func newColorMap(base64gif string, width, height int) (*colorMap, error) {
 	gifReader := base64.NewDecoder(base64.StdEncoding, strings.NewReader(base64gif))
@@ -31,7 +48,7 @@ func newColorMap(base64gif string, width, height int) (*colorMap, error) {
 	}, nil
 }
 
-func (c *colorMap) getColor(x, y int) int {
+func (c *colorMap) getColor(x, y int) cell {
 	colors := make(map[color.Color]int)
 	for i := x * c.dx; i < x*c.dx+c.dx; i++ {
 		for j := y * c.dy; j < y*c.dy+c.dy; j++ {
@@ -39,35 +56,20 @@ func (c *colorMap) getColor(x, y int) int {
 		}
 	}
 
-	var color color.Color
-	var most int
-	for key, value := range colors {
-		if key != background {
-			if value > most {
-				most = value
-				color = key
-			}
+	var bg, fg color.Color
+	var bgCount, fgCount int
+
+	for color, count := range colors {
+		if count > bgCount {
+			fgCount = bgCount
+			fg = bg
+			bgCount = count
+			bg = color
+		} else if count > fgCount {
+			fgCount = count
+			fg = color
 		}
 	}
 
-	return toAnsi(color)
+	return cell{bg: bg, fg: fg}
 }
-
-// TODO use correct colors
-func toAnsi(color color.Color) int {
-	if color == yellow {
-		return 33
-	} else if color == blue {
-		return 34
-	} else if color == green {
-		return 32
-	} else if color == bg_blue {
-		return 42
-	}
-	return 0
-}
-
-var yellow = color.RGBA{255, 255, 0, 255}
-var blue = color.RGBA{0, 255, 255, 255}
-var green = color.RGBA{0, 255, 0, 255}
-var bg_blue = color.RGBA{0, 0, 255, 255}
