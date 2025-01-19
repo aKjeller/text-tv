@@ -14,9 +14,12 @@ type cell struct {
 	fg color.Color
 }
 
+var black = color.RGBA{0, 0, 0, 255}
+
 func (c cell) colorRune(r rune) string {
 	bg, fg := "", ""
-	if c.bg != nil {
+
+	if c.bg != nil && c.bg != black {
 		bgR, bgG, bgB, _ := c.bg.RGBA()
 		bg = fmt.Sprintf("\u001b[48;2;%d;%d;%dm", bgR>>8, bgG>>8, bgB>>8)
 	}
