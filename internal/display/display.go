@@ -2,9 +2,12 @@ package display
 
 import (
 	"fmt"
+	"log"
+	"slices"
 	"strings"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
+	"golang.org/x/term"
 )
 
 func RenderPage(page svttext.Page) error {
@@ -16,8 +19,14 @@ func RenderPage(page svttext.Page) error {
 		pages = append(pages, g)
 	}
 
-	for _, p := range pages {
-		p.render()
+	for chunk := range slices.Chunk(pages, getDisplayWidth(len(pages[0][0]))) {
+		for row, _ := range chunk[0] {
+			r := ""
+			for _, p := range chunk {
+				r += p.encodeRow(row)
+			}
+			fmt.Println(r)
+		}
 	}
 
 	return nil
@@ -25,26 +34,12 @@ func RenderPage(page svttext.Page) error {
 
 type grid [][]cell
 
-func (g grid) getWidth() int {
-	width := 0
-	for _, r := range g {
-		width = max(width, len(r))
+func (g grid) encodeRow(index int) string {
+	r := ""
+	for _, c := range g[index] {
+		r += c.colorRune()
 	}
-	return width
-}
-
-func (g grid) render() {
-	for _, row := range g {
-		r := ""
-		for _, c := range row {
-			r += c.colorRune()
-		}
-
-		// for non transparent background
-		//r += cell{char: ' ', bg: color.Black}.colorRune()
-
-		fmt.Println(r)
-	}
+	return r
 }
 
 func createGrid(text string) grid {
@@ -69,4 +64,17 @@ func createGrid(text string) grid {
 	}
 
 	return grid
+}
+
+func getDisplayWidth(pageWidth int) int {
+	if !term.IsTerminal(0) {
+		return 1
+	}
+
+	width, _, err := term.GetSize(0)
+	if err != nil {
+		log.Fatalf("could not get terminal size", err)
+	}
+
+	return width / pageWidth
 }
