@@ -10,35 +10,46 @@ import (
 const URL_FMT = "https://www.svt.se/text-tv/api/%s"
 
 type Page struct {
+	PageNumber string    `json:"pageNumber"`
+	PrevPage   string    `json:"prevPage"`
+	NextPage   string    `json:"nextPage"`
+	SubPages   []SubPage `json:"subPages"`
+}
+
+type SubPage struct {
 	Text  string
 	Image string
 }
 
-func GetPages(id string) ([]Page, error) {
-	var pages []Page
-
+func GetPage(id string) (Page, error) {
 	url := fmt.Sprintf(URL_FMT, id)
 	resp, err := http.Get(url)
 	if err != nil {
-		return pages, fmt.Errorf("error during GET request to %s: %w", url, err)
+		return Page{}, fmt.Errorf("error during GET request to %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return pages, fmt.Errorf("error reading response body: %w", err)
+		return Page{}, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	var response response
 	if err := json.Unmarshal(body, &response); err != nil {
-		return pages, fmt.Errorf("error parsing JSON response: %w", err)
+		return Page{}, fmt.Errorf("error parsing JSON response: %w", err)
 	}
 
+	var subPages []SubPage
 	for _, page := range response.Data.SubPages {
-		pages = append(pages, Page{Text: page.AltText, Image: page.GifAsBase64})
+		subPages = append(subPages, SubPage{Text: page.AltText, Image: page.GifAsBase64})
 	}
 
-	return pages, nil
+	return Page{
+		PageNumber: response.Data.PageNumber,
+		PrevPage:   response.Data.PrevPage,
+		NextPage:   response.Data.NextPage,
+		SubPages:   subPages,
+	}, nil
 }
 
 type response struct {

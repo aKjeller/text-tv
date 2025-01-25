@@ -8,20 +8,22 @@ import (
 )
 
 func RenderPage(page svttext.Page) error {
-	g := createGrid(page.Text)
-	g = g[2 : len(g)-3]
-
-	colors, err := newColorMap(page.Image, g.getWidth(), len(g))
-	if err != nil {
-		return err
+	var pages []grid
+	for _, sp := range page.SubPages {
+		g := createGrid(sp.Text)
+		g = g[2 : len(g)-3]
+		g = toColorGrid(g, sp)
+		pages = append(pages, g)
 	}
 
-	g.render(colors)
+	for _, p := range pages {
+		p.render()
+	}
 
 	return nil
 }
 
-type grid [][]rune
+type grid [][]cell
 
 func (g grid) getWidth() int {
 	width := 0
@@ -31,33 +33,38 @@ func (g grid) getWidth() int {
 	return width
 }
 
-func (g grid) render(colors *colorMap) {
-	for i, row := range g {
+func (g grid) render() {
+	for _, row := range g {
 		r := ""
-		for j, c := range row {
-			r += colors.getColor(j, i).colorRune(c)
+		for _, c := range row {
+			r += c.colorRune()
 		}
-		r += colors.getColor(i, len(row)-1).colorRune(' ')
+
+		// for non transparent background
+		//r += cell{char: ' ', bg: color.Black}.colorRune()
+
 		fmt.Println(r)
 	}
 }
 
 func createGrid(text string) grid {
 	var grid grid
+	var width int
+
 	rows := strings.Split(text, "\n")
 	for _, row := range rows {
-		var cols []rune
+		var cols []cell
 		for _, c := range row {
-			cols = append(cols, c)
+			cols = append(cols, cell{char: c})
 		}
+		width = max(width, len(cols))
 		grid = append(grid, cols)
 	}
 
-	width := grid.getWidth()
-
+	// add empty spaces to end of row
 	for i := range grid {
 		for j := len(grid[i]); j < width; j++ {
-			grid[i] = append(grid[i], ' ')
+			grid[i] = append(grid[i], cell{char: ' '})
 		}
 	}
 

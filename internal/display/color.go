@@ -6,17 +6,36 @@ import (
 	"image"
 	"image/color"
 	"image/gif"
+	"log"
 	"strings"
+
+	"github.com/aKjeller/text-tv/pkg/svttext"
 )
 
 type cell struct {
-	bg color.Color
-	fg color.Color
+	char rune
+	bg   color.Color
+	fg   color.Color
+}
+
+func toColorGrid(g grid, sp svttext.SubPage) grid {
+	colors, err := newColorMap(sp.Image, len(g[0]), len(g))
+	if err != nil {
+		log.Fatalf("failed to create colormap", err)
+	}
+
+	for i, row := range g {
+		for j, c := range row {
+			g[i][j] = colors.getColor(j, i, c.char)
+		}
+	}
+
+	return g
 }
 
 var black = color.RGBA{0, 0, 0, 255}
 
-func (c cell) colorRune(r rune) string {
+func (c cell) colorRune() string {
 	bg, fg := "", ""
 
 	if c.bg != nil && c.bg != black {
@@ -28,7 +47,7 @@ func (c cell) colorRune(r rune) string {
 		fg = fmt.Sprintf("\u001b[38;2;%d;%d;%dm", fgR>>8, fgG>>8, fgB>>8)
 	}
 
-	return bg + fg + string(r) + "\u001b[0m"
+	return bg + fg + string(c.char) + "\u001b[0m"
 }
 
 type colorMap struct {
@@ -51,7 +70,7 @@ func newColorMap(base64gif string, width, height int) (*colorMap, error) {
 	}, nil
 }
 
-func (c *colorMap) getColor(x, y int) cell {
+func (c *colorMap) getColor(x, y int, char rune) cell {
 	colors := make(map[color.Color]int)
 	for i := x * c.dx; i < x*c.dx+c.dx; i++ {
 		for j := y * c.dy; j < y*c.dy+c.dy; j++ {
@@ -74,5 +93,5 @@ func (c *colorMap) getColor(x, y int) cell {
 		}
 	}
 
-	return cell{bg: bg, fg: fg}
+	return cell{char: char, bg: bg, fg: fg}
 }
