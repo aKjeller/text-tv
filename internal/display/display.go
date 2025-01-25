@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"log"
+	"os"
 	"slices"
 	"strings"
 
@@ -67,11 +68,12 @@ func createGrid(text string) grid {
 }
 
 func getDisplayWidth(pageWidth int) int {
-	if !term.IsTerminal(0) {
+	fd := int(os.Stdout.Fd())
+	if !term.IsTerminal(fd) {
 		return 1
 	}
 
-	width, _, err := term.GetSize(0)
+	width, _, err := term.GetSize(fd)
 	if err != nil {
 		log.Fatalf("could not get terminal size", err)
 	}
