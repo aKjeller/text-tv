@@ -11,60 +11,17 @@ import (
 	"golang.org/x/term"
 )
 
-func RenderPage(page svttext.Page) error {
-	var pages []grid
-	for _, sp := range page.SubPages {
-		g := createGrid(sp.Text)
-		g = g[2 : len(g)-3]
-		g = toColorGrid(g, sp)
-		pages = append(pages, g)
-	}
-
-	for chunk := range slices.Chunk(pages, getDisplayWidth(len(pages[0][0]))) {
-		for row, _ := range chunk[0] {
-			r := ""
-			for _, p := range chunk {
-				r += p.encodeRow(row)
+func RenderPage(page svttext.Page) {
+	fmt.Println()
+	for chunk := range slices.Chunk(page.SubPages, getDisplayWidth(svttext.PageWidth)) {
+		for row := range svttext.PageHeight {
+			var sb strings.Builder
+			for _, sp := range chunk {
+				sb.WriteString(sp.Grid[row].ColorString())
 			}
-			fmt.Println(r)
+			fmt.Println(sb.String())
 		}
 	}
-
-	return nil
-}
-
-type grid [][]cell
-
-func (g grid) encodeRow(index int) string {
-	r := ""
-	for _, c := range g[index] {
-		r += c.colorRune()
-	}
-	return r
-}
-
-func createGrid(text string) grid {
-	var grid grid
-	var width int
-
-	rows := strings.Split(text, "\n")
-	for _, row := range rows {
-		var cols []cell
-		for _, c := range row {
-			cols = append(cols, cell{char: c})
-		}
-		width = max(width, len(cols))
-		grid = append(grid, cols)
-	}
-
-	// add empty spaces to end of row
-	for i := range grid {
-		for j := len(grid[i]); j < width; j++ {
-			grid[i] = append(grid[i], cell{char: ' '})
-		}
-	}
-
-	return grid
 }
 
 func getDisplayWidth(pageWidth int) int {
@@ -75,7 +32,7 @@ func getDisplayWidth(pageWidth int) int {
 
 	width, _, err := term.GetSize(fd)
 	if err != nil {
-		log.Fatalf("could not get terminal size", err)
+		log.Fatalf("could not get terminal size: %v", err)
 	}
 
 	return width / pageWidth

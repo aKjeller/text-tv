@@ -9,18 +9,6 @@ import (
 
 const URL_FMT = "https://www.svt.se/text-tv/api/%s"
 
-type Page struct {
-	PageNumber string    `json:"pageNumber"`
-	PrevPage   string    `json:"prevPage"`
-	NextPage   string    `json:"nextPage"`
-	SubPages   []SubPage `json:"subPages"`
-}
-
-type SubPage struct {
-	Text  string
-	Image string
-}
-
 func GetPage(id string) (Page, error) {
 	url := fmt.Sprintf(URL_FMT, id)
 	resp, err := http.Get(url)
@@ -39,17 +27,12 @@ func GetPage(id string) (Page, error) {
 		return Page{}, fmt.Errorf("error parsing JSON response: %w", err)
 	}
 
-	var subPages []SubPage
-	for _, page := range response.Data.SubPages {
-		subPages = append(subPages, SubPage{Text: page.AltText, Image: page.GifAsBase64})
+	page, err := newPage(response.Data)
+	if err != nil {
+		return page, fmt.Errorf("failed to create new page, %w", err)
 	}
 
-	return Page{
-		PageNumber: response.Data.PageNumber,
-		PrevPage:   response.Data.PrevPage,
-		NextPage:   response.Data.NextPage,
-		SubPages:   subPages,
-	}, nil
+	return page, nil
 }
 
 type response struct {

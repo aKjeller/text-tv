@@ -11,7 +11,7 @@ import (
 
 func main() {
 	if len(os.Args) != 2 {
-		fmt.Println("usage: go run . <page_id>")
+		fmt.Println("usage: text-tv <page_id>")
 		os.Exit(1)
 	}
 
@@ -19,11 +19,8 @@ func main() {
 
 	page, err := svttext.GetPage(pageId)
 	if err != nil {
-		log.Fatalf("failed to get page", err)
+		log.Fatalf("failed to get page: %v", err)
 	}
 
-	err = display.RenderPage(page)
-	if err != nil {
-		log.Fatalf("failed to render page", err)
-	}
+	display.RenderPage(page)
 }
