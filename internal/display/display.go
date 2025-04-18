@@ -11,7 +11,13 @@ import (
 	"golang.org/x/term"
 )
 
-func RenderPage(page svttext.Page) {
+func PrintPage(pageId string) {
+	client := svttext.NewClient()
+	page, err := client.GetPage(pageId)
+	if err != nil {
+		log.Fatalf("failed to get page: %v", err)
+	}
+
 	fmt.Println()
 	for chunk := range slices.Chunk(page.SubPages, getDisplayWidth(svttext.PageWidth)) {
 		for row := range svttext.PageHeight {

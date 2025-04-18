@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -9,12 +10,19 @@ import (
 )
 
 type Model struct {
-	page  svttext.Page
-	index int
+	page   svttext.Page
+	index  int
+	client *svttext.Client
+}
+
+func NewModel() Model {
+	return Model{
+		client: svttext.NewClient(svttext.WithCaching()),
+	}
 }
 
 func (m Model) Init() tea.Cmd {
-	return getPage("377")
+	return m.getPage("377")
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -23,10 +31,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-		case "j":
-			return m, getPage(m.page.NextPage)
 		case "k":
-			return m, getPage(m.page.PrevPage)
+			return m, m.getPage(m.page.NextPage)
+		case "j":
+			return m, m.getPage(m.page.PrevPage)
 		case "h":
 			m.index = m.prevIndex()
 		case "l":
@@ -58,6 +66,8 @@ func (m Model) View() string {
 		}
 	}
 
+	sb.WriteString(fmt.Sprintf("\nCache size: %d", m.client.CacheSize()))
+
 	return sb.String()
 }
 
@@ -77,9 +87,9 @@ func (m Model) prevIndex() int {
 
 type newPage svttext.Page
 
-func getPage(pageId string) tea.Cmd {
+func (m Model) getPage(pageId string) tea.Cmd {
 	return func() tea.Msg {
-		page, err := svttext.GetPage(pageId)
+		page, err := m.client.GetPage(pageId)
 		if err != nil {
 			log.Fatalf("failed to get page: %v", err)
 		}

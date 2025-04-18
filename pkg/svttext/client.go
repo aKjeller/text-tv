@@ -9,7 +9,36 @@ import (
 
 const URL_FMT = "https://www.svt.se/text-tv/api/%s"
 
-func GetPage(id string) (Page, error) {
+type Client struct {
+	useCache bool
+	cache    map[string]Page
+}
+
+func NewClient(opts ...Option) *Client {
+	c := &Client{
+		cache: make(map[string]Page),
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	return c
+}
+
+type Option func(*Client)
+
+func WithCaching() Option {
+	return func(c *Client) {
+		c.useCache = true
+	}
+}
+
+func (c *Client) GetPage(id string) (Page, error) {
+	if page, ok := c.cache[id]; ok && c.useCache {
+		return page, nil
+	}
+
 	url := fmt.Sprintf(URL_FMT, id)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -32,7 +61,15 @@ func GetPage(id string) (Page, error) {
 		return page, fmt.Errorf("failed to create new page, %w", err)
 	}
 
+	if c.useCache {
+		c.cache[id] = page
+	}
+
 	return page, nil
+}
+
+func (c *Client) CacheSize() int {
+	return len(c.cache)
 }
 
 type response struct {
