@@ -1,23 +1,34 @@
 package tui
 
 import (
-	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
 	tea "github.com/charmbracelet/bubbletea/v2"
+	"github.com/charmbracelet/lipgloss/v2"
+	"golang.org/x/term"
 )
 
 type Model struct {
-	page   svttext.Page
-	index  int
+	page svttext.Page
+
+	// SubPage Pagination
+	activeIndex int
+	activeDot   string
+	inactiveDot string
+
 	client *svttext.Client
 }
 
 func NewModel() Model {
 	return Model{
-		client: svttext.NewClient(svttext.WithCaching()),
+		client:      svttext.NewClient(svttext.WithCaching()),
+		page:        svttext.Page{},
+		activeIndex: 0,
+		activeDot:   lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render("●"),
+		inactiveDot: lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Render("●"),
 	}
 }
 
@@ -36,13 +47,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "j":
 			return m, m.getPage(m.page.PrevPage)
 		case "h":
-			m.index = m.prevIndex()
+			m.activeIndex = m.prevIndex()
 		case "l":
-			m.index = m.nextIndex()
+			m.activeIndex = m.nextIndex()
 		}
 	case newPage:
 		m.page = svttext.Page(msg)
-		m.index = 0
+		m.activeIndex = 0
 	}
 	return m, nil
 }
@@ -53,36 +64,51 @@ func (m Model) View() string {
 	}
 
 	var sb strings.Builder
-	for _, row := range m.page.SubPages[m.index].Grid {
+	for _, row := range m.page.SubPages[m.activeIndex].Grid {
 		sb.WriteString(row.ColorString())
 		sb.WriteString("\n")
 	}
 
+	sb.WriteString(" ")
 	for i := range m.page.SubPages {
-		if i == m.index {
-			sb.WriteRune('•')
+		if i == m.activeIndex {
+			sb.WriteString(m.activeDot + " ")
 		} else {
-			sb.WriteRune('◦')
+			sb.WriteString(m.inactiveDot + " ")
 		}
 	}
 
-	sb.WriteString(fmt.Sprintf("\nCache size: %d", m.client.CacheSize()))
+	// TODO: Add debug options
+	// sb.WriteString(fmt.Sprintf("\nCache size: %d", m.client.CacheSize()))
 
-	return sb.String()
+	tv := lipgloss.NewStyle().
+		Align(lipgloss.Center).
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderForeground(lipgloss.BrightBlue)
+
+	width, height, _ := term.GetSize(int(os.Stdout.Fd()))
+	screen := lipgloss.NewStyle().
+		Width(width).
+		Height(height).
+		AlignHorizontal(lipgloss.Center).
+		AlignVertical(lipgloss.Center).
+		Padding(2, 0)
+
+	return screen.Render(tv.Render(sb.String()))
 }
 
 func (m Model) nextIndex() int {
-	if m.index < len(m.page.SubPages)-1 {
-		return m.index + 1
+	if m.activeIndex < len(m.page.SubPages)-1 {
+		return m.activeIndex + 1
 	}
-	return m.index
+	return m.activeIndex
 }
 
 func (m Model) prevIndex() int {
-	if m.index > 0 {
-		return m.index - 1
+	if m.activeIndex > 0 {
+		return m.activeIndex - 1
 	}
-	return m.index
+	return m.activeIndex
 }
 
 type newPage svttext.Page
