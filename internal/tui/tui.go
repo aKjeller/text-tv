@@ -54,6 +54,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case newPage:
 		m.page = svttext.Page(msg)
 		m.activeIndex = 0
+		return m, tea.Batch(m.preLoadPage(m.page.PrevPage), m.preLoadPage(m.page.NextPage))
 	}
 	return m, nil
 }
@@ -78,7 +79,7 @@ func (m Model) View() string {
 		}
 	}
 
-	// TODO: Add debug options
+	// TODO: add debug options
 	// sb.WriteString(fmt.Sprintf("\nCache size: %d", m.client.CacheSize()))
 
 	tv := lipgloss.NewStyle().
@@ -120,5 +121,12 @@ func (m Model) getPage(pageId string) tea.Cmd {
 			log.Fatalf("failed to get page: %v", err)
 		}
 		return newPage(page)
+	}
+}
+
+func (m Model) preLoadPage(pageId string) tea.Cmd {
+	return func() tea.Msg {
+		_, _ = m.client.GetPage(pageId)
+		return nil
 	}
 }
