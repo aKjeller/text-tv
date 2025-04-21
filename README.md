@@ -9,6 +9,7 @@ Because let’s be honest — Text-TV is still the most efficient, no-nonsense n
 ## ✨ Features
 
 - 📺 Read **Text-TV** in the terminal
+- 🎨 Beautiful colors
 - ⌨️ Proper keybindings
 
 ## 📦 Installation
@@ -43,5 +44,5 @@ text-tv
 
 ## 🤝 Contributing
 
-If you find a bug or have a feature request, feel free to open an issue or PR.
+If you find a bug or have a feature request, feel free to open an issue!
 
