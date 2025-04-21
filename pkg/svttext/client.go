@@ -73,6 +73,10 @@ func getPageFromTextTv(id string) (Page, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return Page{}, fmt.Errorf("error getting page, got status %d: %w", resp.StatusCode, err)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return Page{}, fmt.Errorf("error reading response body: %w", err)

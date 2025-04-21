@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"log"
 	"os"
 	"strings"
 
@@ -33,7 +32,7 @@ func NewModel() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.getPage("377")
+	return m.getPage("100")
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -118,7 +117,9 @@ func (m Model) getPage(pageId string) tea.Cmd {
 	return func() tea.Msg {
 		page, err := m.client.GetPage(pageId)
 		if err != nil {
-			log.Fatalf("failed to get page: %v", err)
+			// TODO: add error / debug handling
+			// log.Printf("failed to get page: %v", err)
+			return nil
 		}
 		return newPage(page)
 	}
