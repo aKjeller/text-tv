@@ -18,6 +18,8 @@ type Model struct {
 	activeDot   string
 	inactiveDot string
 
+	input string
+
 	client *svttext.Client
 }
 
@@ -32,7 +34,11 @@ func NewModel() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return m.getPage("100")
+	return tea.Batch(
+		m.getPage("100"),
+		m.preLoadPage("130"),
+		m.preLoadPage("377"),
+	)
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -49,11 +55,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeIndex = m.prevIndex()
 		case "l":
 			m.activeIndex = m.nextIndex()
+		case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+			m.input += msg.String()
+			if len(m.input) == 3 {
+				return m, m.getPage(m.input)
+			}
 		}
-	case newPage:
-		m.page = svttext.Page(msg)
+	case pageLoadedMsg:
+		m.page = msg.page
 		m.activeIndex = 0
+		m.input = ""
 		return m, tea.Batch(m.preLoadPage(m.page.PrevPage), m.preLoadPage(m.page.NextPage))
+	case pageFallbackMsg:
+		return m, m.getPage(msg.fallbackPageId)
 	}
 	return m, nil
 }
@@ -111,7 +125,13 @@ func (m Model) prevIndex() int {
 	return m.activeIndex
 }
 
-type newPage svttext.Page
+type pageLoadedMsg struct {
+	page svttext.Page
+}
+
+type pageFallbackMsg struct {
+	fallbackPageId string
+}
 
 func (m Model) getPage(pageId string) tea.Cmd {
 	return func() tea.Msg {
@@ -121,7 +141,18 @@ func (m Model) getPage(pageId string) tea.Cmd {
 			// log.Printf("failed to get page: %v", err)
 			return nil
 		}
-		return newPage(page)
+
+		if len(page.SubPages) == 0 {
+			if page.PrevPage != "" {
+				return pageFallbackMsg{page.PrevPage}
+			} else if page.NextPage != "" {
+				return pageFallbackMsg{page.NextPage}
+			} else {
+				return nil
+			}
+		}
+
+		return pageLoadedMsg{page}
 	}
 }
 
