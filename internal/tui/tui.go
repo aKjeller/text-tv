@@ -3,6 +3,7 @@ package tui
 import (
 	"os"
 	"strings"
+	"time"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
 	tea "github.com/charmbracelet/bubbletea/v2"
@@ -25,7 +26,7 @@ type Model struct {
 
 func NewModel() Model {
 	return Model{
-		client:      svttext.NewClient(svttext.WithCaching()),
+		client:      svttext.NewClient(svttext.WithCacheTime(1 * time.Minute)),
 		page:        svttext.Page{},
 		activeIndex: 0,
 		activeDot:   lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render("●"),

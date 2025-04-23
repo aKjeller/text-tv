@@ -6,19 +6,22 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const URL_FMT = "https://www.svt.se/text-tv/api/%s"
 
 type Client struct {
-	useCache bool
-	cache    map[string]Page
-	mu       sync.RWMutex
+	cacheTime time.Duration
+	cache     map[string]Page
+	pageMu    map[string]*sync.Mutex
+	mu        sync.Mutex
 }
 
 func NewClient(opts ...Option) *Client {
 	c := &Client{
-		cache: make(map[string]Page),
+		cache:  make(map[string]Page),
+		pageMu: make(map[string]*sync.Mutex),
 	}
 
 	for _, opt := range opts {
@@ -30,33 +33,33 @@ func NewClient(opts ...Option) *Client {
 
 type Option func(*Client)
 
-func WithCaching() Option {
+func WithCacheTime(time time.Duration) Option {
 	return func(c *Client) {
-		c.useCache = true
+		c.cacheTime = time
 	}
 }
 
 func (c *Client) GetPage(id string) (Page, error) {
-	if c.useCache {
-		c.mu.RLock()
-		page, ok := c.cache[id]
-		c.mu.RUnlock()
-		if ok {
-			return page, nil
-		}
+	c.mu.Lock()
+	if _, ok := c.pageMu[id]; !ok {
+		c.pageMu[id] = &sync.Mutex{}
+	}
+	mu := c.pageMu[id]
+	c.mu.Unlock()
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	if page, ok := c.cache[id]; ok && page.FetchedAt.Add(c.cacheTime).After(time.Now()) {
+		return page, nil
 	}
 
-	// TODO: avoid duplicate fetches of same id
 	page, err := getPageFromTextTv(id)
 	if err != nil {
 		return Page{}, fmt.Errorf("failed to get page from text-tv: %w", err)
 	}
 
-	if c.useCache {
-		c.mu.Lock()
-		c.cache[id] = page
-		c.mu.Unlock()
-	}
+	c.cache[id] = page
 
 	return page, nil
 }

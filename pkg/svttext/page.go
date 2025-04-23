@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"image/gif"
 	"strings"
+	"time"
 )
 
 const (
@@ -21,6 +22,7 @@ type Page struct {
 	PrevPage   string    `json:"prevPage"`
 	NextPage   string    `json:"nextPage"`
 	SubPages   []SubPage `json:"subPages"`
+	FetchedAt  time.Time `json:"fetchedAt"`
 }
 
 type SubPage struct {
@@ -79,6 +81,7 @@ func newPage(data data) (Page, error) {
 		PrevPage:   data.PrevPage,
 		NextPage:   data.NextPage,
 		SubPages:   subPages,
+		FetchedAt:  time.Now(),
 	}, nil
 }
 
