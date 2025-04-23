@@ -1,14 +1,12 @@
 package tui
 
 import (
-	"os"
 	"strings"
 	"time"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
-	"golang.org/x/term"
 )
 
 type Model struct {
@@ -18,6 +16,10 @@ type Model struct {
 	activeIndex int
 	activeDot   string
 	inactiveDot string
+
+	// terminal size
+	width  int
+	height int
 
 	input string
 
@@ -69,6 +71,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(m.preLoadPage(m.page.PrevPage), m.preLoadPage(m.page.NextPage))
 	case pageFallbackMsg:
 		return m, m.getPage(msg.fallbackPageId)
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
 	}
 	return m, nil
 }
@@ -101,10 +106,9 @@ func (m Model) View() string {
 		BorderStyle(lipgloss.RoundedBorder()).
 		BorderForeground(lipgloss.BrightBlue)
 
-	width, height, _ := term.GetSize(int(os.Stdout.Fd()))
 	screen := lipgloss.NewStyle().
-		Width(width).
-		Height(height).
+		Width(m.width).
+		Height(m.height).
 		AlignHorizontal(lipgloss.Center).
 		AlignVertical(lipgloss.Center).
 		Padding(2, 0)
