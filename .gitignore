@@ -5,7 +5,14 @@
 !/.gitignore
 
 !/.README.md
-!*.png
+
+!/.goreleaser.yaml
+
+!assets/
+!assets/**
+
+!.github/
+!.github/**
 
 !*.go
 !go.sum
