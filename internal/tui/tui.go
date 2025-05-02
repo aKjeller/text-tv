@@ -37,7 +37,7 @@ var defaultKeyMap = keyMap{
 		key.WithKeys("h", "left"),
 		key.WithHelp("h/←", "scroll left")),
 	Continue: key.NewBinding(
-		key.WithKeys("space"),
+		key.WithKeys(" "),
 		key.WithHelp("space", "continue")),
 	Number: key.NewBinding(
 		key.WithKeys("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
