@@ -6,9 +6,40 @@ import (
 	"time"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
+	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 )
+
+type KeyMap struct {
+	Next   key.Binding
+	Prev   key.Binding
+	Right  key.Binding
+	Left   key.Binding
+	Number key.Binding
+	Quit   key.Binding
+}
+
+var DefaultKeyMap = KeyMap{
+	Next: key.NewBinding(
+		key.WithKeys("k", "up"),
+		key.WithHelp("a", "next page")),
+	Prev: key.NewBinding(
+		key.WithKeys("j", "down"),
+		key.WithHelp("a", "previous page")),
+	Right: key.NewBinding(
+		key.WithKeys("l", "right"),
+		key.WithHelp("a", "scroll right")),
+	Left: key.NewBinding(
+		key.WithKeys("h", "left"),
+		key.WithHelp("a", "scroll left")),
+	Number: key.NewBinding(
+		key.WithKeys("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
+		key.WithHelp("0-9", "search")),
+	Quit: key.NewBinding(
+		key.WithKeys("ctrl+c", "q"),
+		key.WithHelp("a", "quit")),
+}
 
 type Model struct {
 	page svttext.Page
@@ -48,18 +79,18 @@ func (m Model) Init() tea.Cmd {
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
-		switch msg.String() {
-		case "ctrl+c", "q":
+		switch {
+		case key.Matches(msg, DefaultKeyMap.Quit):
 			return m, tea.Quit
-		case "k":
+		case key.Matches(msg, DefaultKeyMap.Next):
 			return m, m.getPage(m.page.NextPage)
-		case "j":
+		case key.Matches(msg, DefaultKeyMap.Prev):
 			return m, m.getPage(m.page.PrevPage)
-		case "h":
+		case key.Matches(msg, DefaultKeyMap.Left):
 			m.activeIndex = m.prevIndex()
-		case "l":
+		case key.Matches(msg, DefaultKeyMap.Right):
 			m.activeIndex = m.nextIndex()
-		case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
+		case key.Matches(msg, DefaultKeyMap.Number):
 			m.input = append(m.input, msg.Key().Code)
 			if len(m.input) == 3 {
 				return m, m.getPage(string(m.input))
