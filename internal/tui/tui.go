@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"slices"
 	"strings"
 	"time"
 
@@ -21,7 +22,7 @@ type Model struct {
 	width  int
 	height int
 
-	input string
+	input []rune
 
 	client *svttext.Client
 }
@@ -59,15 +60,15 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "l":
 			m.activeIndex = m.nextIndex()
 		case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
-			m.input += msg.String()
+			m.input = append(m.input, msg.Key().Code)
 			if len(m.input) == 3 {
-				return m, m.getPage(m.input)
+				return m, m.getPage(string(m.input))
 			}
 		}
 	case pageLoadedMsg:
 		m.page = msg.page
 		m.activeIndex = 0
-		m.input = ""
+		m.input = []rune{}
 		return m, tea.Batch(m.preLoadPage(m.page.PrevPage), m.preLoadPage(m.page.NextPage))
 	case pageFallbackMsg:
 		return m, m.getPage(msg.fallbackPageId)
@@ -84,8 +85,12 @@ func (m Model) View() string {
 	}
 
 	var sb strings.Builder
-	for _, row := range m.page.SubPages[m.activeIndex].Grid {
-		sb.WriteString(row.ColorString())
+	for i, row := range m.page.SubPages[m.activeIndex].Grid {
+		if i == 0 && len(m.input) != 0 {
+			sb.WriteString(replacePageNbr(row, m.input).ColorString())
+		} else {
+			sb.WriteString(row.ColorString())
+		}
 		sb.WriteString("\n")
 	}
 
@@ -116,6 +121,19 @@ func (m Model) View() string {
 	return screen.Render(tv.Render(sb.String()))
 }
 
+func replacePageNbr(row svttext.Row, nbr []rune) svttext.Row {
+	res := slices.Clone(row)
+	for i := 0; i < 3; i++ {
+		pos := 3 + i
+		if i < len(nbr) && nbr[i] != 0 {
+			res[pos].Char = nbr[i]
+		} else {
+			res[pos].Char = ' '
+		}
+	}
+	return res
+}
+
 func (m Model) nextIndex() int {
 	if m.activeIndex < len(m.page.SubPages)-1 {
 		return m.activeIndex + 1
@@ -144,7 +162,7 @@ func (m Model) getPage(pageId string) tea.Cmd {
 		if err != nil {
 			// TODO: add error / debug handling
 			// log.Printf("failed to get page: %v", err)
-			return nil
+			return pageFallbackMsg{"100"}
 		}
 
 		if len(page.SubPages) == 0 {
