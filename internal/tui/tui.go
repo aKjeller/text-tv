@@ -6,39 +6,59 @@ import (
 	"time"
 
 	"github.com/aKjeller/text-tv/pkg/svttext"
-	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/v2/help"
+	"github.com/charmbracelet/bubbles/v2/key"
 	tea "github.com/charmbracelet/bubbletea/v2"
 	"github.com/charmbracelet/lipgloss/v2"
 )
 
-type KeyMap struct {
-	Next   key.Binding
-	Prev   key.Binding
-	Right  key.Binding
-	Left   key.Binding
-	Number key.Binding
-	Quit   key.Binding
+type keyMap struct {
+	Next     key.Binding
+	Prev     key.Binding
+	Right    key.Binding
+	Left     key.Binding
+	Continue key.Binding
+	Number   key.Binding
+	Help     key.Binding
+	Quit     key.Binding
 }
 
-var DefaultKeyMap = KeyMap{
+var defaultKeyMap = keyMap{
 	Next: key.NewBinding(
 		key.WithKeys("k", "up"),
-		key.WithHelp("a", "next page")),
+		key.WithHelp("k/↑", "next page")),
 	Prev: key.NewBinding(
 		key.WithKeys("j", "down"),
-		key.WithHelp("a", "previous page")),
+		key.WithHelp("j/↓", "previous page")),
 	Right: key.NewBinding(
 		key.WithKeys("l", "right"),
-		key.WithHelp("a", "scroll right")),
+		key.WithHelp("l/→", "scroll right")),
 	Left: key.NewBinding(
 		key.WithKeys("h", "left"),
-		key.WithHelp("a", "scroll left")),
+		key.WithHelp("h/←", "scroll left")),
+	Continue: key.NewBinding(
+		key.WithKeys("space"),
+		key.WithHelp("space", "continue")),
 	Number: key.NewBinding(
 		key.WithKeys("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"),
 		key.WithHelp("0-9", "search")),
+	Help: key.NewBinding(
+		key.WithKeys("?"),
+		key.WithHelp("?", "toggle help")),
 	Quit: key.NewBinding(
 		key.WithKeys("ctrl+c", "q"),
-		key.WithHelp("a", "quit")),
+		key.WithHelp("q", "quit")),
+}
+
+func (k keyMap) ShortHelp() []key.Binding {
+	return []key.Binding{k.Help, k.Quit}
+}
+
+func (k keyMap) FullHelp() [][]key.Binding {
+	return [][]key.Binding{
+		{k.Left, k.Prev, k.Next, k.Right},
+		{k.Number, k.Continue, k.Help, k.Quit},
+	}
 }
 
 type Model struct {
@@ -55,6 +75,10 @@ type Model struct {
 
 	input []rune
 
+	// keybinds
+	keys keyMap
+	help help.Model
+
 	client *svttext.Client
 }
 
@@ -62,9 +86,10 @@ func NewModel() Model {
 	return Model{
 		client:      svttext.NewClient(svttext.WithCacheTime(1 * time.Minute)),
 		page:        svttext.Page{},
-		activeIndex: 0,
 		activeDot:   lipgloss.NewStyle().Foreground(lipgloss.Color("252")).Render("●"),
 		inactiveDot: lipgloss.NewStyle().Foreground(lipgloss.Color("238")).Render("●"),
+		keys:        defaultKeyMap,
+		help:        help.New(),
 	}
 }
 
@@ -80,21 +105,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyPressMsg:
 		switch {
-		case key.Matches(msg, DefaultKeyMap.Quit):
+		case key.Matches(msg, m.keys.Quit):
 			return m, tea.Quit
-		case key.Matches(msg, DefaultKeyMap.Next):
+		case key.Matches(msg, m.keys.Next):
 			return m, m.getPage(m.page.NextPage)
-		case key.Matches(msg, DefaultKeyMap.Prev):
+		case key.Matches(msg, m.keys.Prev):
 			return m, m.getPage(m.page.PrevPage)
-		case key.Matches(msg, DefaultKeyMap.Left):
+		case key.Matches(msg, m.keys.Left):
 			m.activeIndex = m.prevIndex()
-		case key.Matches(msg, DefaultKeyMap.Right):
+		case key.Matches(msg, m.keys.Right):
 			m.activeIndex = m.nextIndex()
-		case key.Matches(msg, DefaultKeyMap.Number):
+		case key.Matches(msg, m.keys.Continue):
+			newIndex := m.nextIndex()
+			if newIndex != m.activeIndex {
+				m.activeIndex = newIndex
+			} else {
+				return m, m.getPage(m.page.NextPage)
+			}
+		case key.Matches(msg, m.keys.Number):
 			m.input = append(m.input, msg.Key().Code)
 			if len(m.input) == 3 {
 				return m, m.getPage(string(m.input))
 			}
+		case key.Matches(msg, m.keys.Help):
+			m.help.ShowAll = !m.help.ShowAll
 		}
 	case pageLoadedMsg:
 		m.page = msg.page
@@ -118,11 +152,10 @@ func (m Model) View() string {
 	var sb strings.Builder
 	for i, row := range m.page.SubPages[m.activeIndex].Grid {
 		if i == 0 && len(m.input) != 0 {
-			sb.WriteString(replacePageNbr(row, m.input).ColorString())
-		} else {
-			sb.WriteString(row.ColorString())
+			sb.WriteString(replacePageNbr(row, m.input).ColorString() + "\n")
+		} else if i < svttext.PageHeight-1 {
+			sb.WriteString(row.ColorString() + "\n")
 		}
-		sb.WriteString("\n")
 	}
 
 	sb.WriteString(" ")
@@ -136,6 +169,8 @@ func (m Model) View() string {
 
 	// TODO: add debug options
 	// sb.WriteString(fmt.Sprintf("\nCache size: %d", m.client.CacheSize()))
+
+	sb.WriteString("\n" + m.help.View(m.keys))
 
 	tv := lipgloss.NewStyle().
 		Align(lipgloss.Center).

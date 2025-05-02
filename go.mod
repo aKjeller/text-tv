@@ -3,7 +3,7 @@ module github.com/aKjeller/text-tv
 go 1.24.2
 
 require (
-	github.com/charmbracelet/bubbles v0.21.0
+	github.com/charmbracelet/bubbles/v2 v2.0.0-beta.1
 	github.com/charmbracelet/bubbletea/v2 v2.0.0-beta1
 	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta1
 	golang.org/x/term v0.31.0
