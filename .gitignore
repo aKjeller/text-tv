@@ -18,5 +18,7 @@
 !go.sum
 !go.mod
 
+!Dockerfile
+
 # ...even if they are in subdirectories
 !*/
